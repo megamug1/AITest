@@ -1,6 +1,6 @@
 # MonoGameBasic
 
-A basic MonoGame application featuring a movable blob.
+A basic MonoGame application featuring a movable blob, enemies, and game states.
 
 ## Prerequisites
 
@@ -30,6 +30,14 @@ dotnet run
 
 ## Controls
 
+### Menu
+-   **Start Game**: `Enter`
+-   **Settings**: `S`
+
+### Settings
+-   **Back to Menu**: `Escape`
+
+### In-Game
 -   **Move Up**: `W` or `Up Arrow`
 -   **Move Down**: `S` or `Down Arrow`
 -   **Move Left**: `A` or `Left Arrow`
