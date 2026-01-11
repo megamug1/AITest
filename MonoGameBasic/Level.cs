@@ -38,6 +38,37 @@ namespace MonoGameBasic
             foreach (var enemy in Enemies)
             {
                 enemy.Update(gameTime, viewport);
+
+                // Enemy vs Obstacle Collision
+                foreach (var obstacle in Obstacles)
+                {
+                    if (enemy.Bounds.Intersects(obstacle.Bounds))
+                    {
+                         Rectangle intersection = Rectangle.Intersect(enemy.Bounds, obstacle.Bounds);
+
+                         // Determine collision side and reflect velocity
+                         if (intersection.Width < intersection.Height)
+                         {
+                             // Horizontal Collision
+                             if (enemy.Bounds.Center.X < obstacle.Bounds.Center.X)
+                                 enemy.Position = new Vector2(enemy.Position.X - intersection.Width, enemy.Position.Y);
+                             else
+                                 enemy.Position = new Vector2(enemy.Position.X + intersection.Width, enemy.Position.Y);
+
+                             enemy.Velocity = new Vector2(enemy.Velocity.X * -1, enemy.Velocity.Y);
+                         }
+                         else
+                         {
+                             // Vertical Collision
+                             if (enemy.Bounds.Center.Y < obstacle.Bounds.Center.Y)
+                                 enemy.Position = new Vector2(enemy.Position.X, enemy.Position.Y - intersection.Height);
+                             else
+                                 enemy.Position = new Vector2(enemy.Position.X, enemy.Position.Y + intersection.Height);
+
+                             enemy.Velocity = new Vector2(enemy.Velocity.X, enemy.Velocity.Y * -1);
+                         }
+                    }
+                }
             }
         }
 

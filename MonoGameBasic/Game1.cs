@@ -14,6 +14,8 @@ public class Game1 : Game
     private Player _player;
     private Level _level;
 
+    private KeyboardState _previousKeyboardState;
+
     private enum GameState
     {
         Menu,
@@ -57,7 +59,8 @@ public class Game1 : Game
         switch (_currentState)
         {
             case GameState.Menu:
-                if (gamePadState.Buttons.Back == ButtonState.Pressed || kstate.IsKeyDown(Keys.Escape))
+                // Only exit if Escape is newly pressed, to avoid exiting immediately after pausing
+                if (gamePadState.Buttons.Back == ButtonState.Pressed || (kstate.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape)))
                     Exit();
 
                 if (kstate.IsKeyDown(Keys.Enter))
@@ -102,6 +105,8 @@ public class Game1 : Game
                 }
                 break;
         }
+
+        _previousKeyboardState = kstate;
 
         base.Update(gameTime);
     }
