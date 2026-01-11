@@ -32,7 +32,7 @@ dotnet run
 
 ### Menu
 -   **Start Game**: `Enter`
--   **Settings**: `S`
+-   **Settings**: `O`
 
 ### Settings
 -   **Back to Menu**: `Escape`

@@ -12,7 +12,9 @@ public class Game1 : Game
     private SpriteFont _font;
 
     private Player _player;
-    private Enemy _enemy;
+    private Level _level;
+
+    private KeyboardState _previousKeyboardState;
 
     private enum GameState
     {
@@ -42,12 +44,11 @@ public class Game1 : Game
         _font = Content.Load<SpriteFont>("File");
 
         // Initialize Player
-        var startPos = new Vector2(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2);
+        var startPos = new Vector2(50, 50); // Start at top left
         _player = new Player(GraphicsDevice, startPos);
 
-        // Initialize Enemy
-        var enemyPos = new Vector2(100, 100);
-        _enemy = new Enemy(GraphicsDevice, enemyPos);
+        // Initialize Level
+        _level = new Level(GraphicsDevice);
     }
 
     protected override void Update(GameTime gameTime)
@@ -58,13 +59,14 @@ public class Game1 : Game
         switch (_currentState)
         {
             case GameState.Menu:
-                if (gamePadState.Buttons.Back == ButtonState.Pressed || kstate.IsKeyDown(Keys.Escape))
+                // Only exit if Escape is newly pressed, to avoid exiting immediately after pausing
+                if (gamePadState.Buttons.Back == ButtonState.Pressed || (kstate.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape)))
                     Exit();
 
                 if (kstate.IsKeyDown(Keys.Enter))
                     _currentState = GameState.Playing;
 
-                if (kstate.IsKeyDown(Keys.S))
+                if (kstate.IsKeyDown(Keys.O))
                     _currentState = GameState.Settings;
                 break;
 
@@ -80,31 +82,31 @@ public class Game1 : Game
                     // Reset positions or state if desired, or just pause
                 }
                 _player.Update(gameTime, GraphicsDevice.Viewport);
-                _enemy.Update(gameTime, GraphicsDevice.Viewport);
+                _level.Update(gameTime, GraphicsDevice.Viewport);
 
-                // Simple Collision Detection
-                if (_player.Bounds.Intersects(_enemy.Bounds))
+                // Level Collision & Logic
+                bool levelComplete = _level.CheckCollisions(_player);
+
+                if (_player.Health <= 0)
                 {
-                     // "Hurts" the blob
-                     _player.Health -= 1;
+                    // Game Over logic (reset for now)
+                    _player.Health = 100;
+                    _player.Position = new Vector2(50, 50);
+                    _currentState = GameState.Menu;
+                }
 
-                     // Simple pushback to avoid instant death
-                     var direction = _player.Position - _enemy.Position;
-                     if (direction != Vector2.Zero)
-                     {
-                         direction.Normalize();
-                         _player.Position += direction * 10f;
-                     }
-
-                     if (_player.Health <= 0)
-                     {
-                         // Game Over logic (reset for now)
-                         _player.Health = 100;
-                         _currentState = GameState.Menu;
-                     }
+                if (levelComplete)
+                {
+                    // Level Completed! Back to menu for now, or reset
+                     _player.Health = 100;
+                     _player.Position = new Vector2(50, 50);
+                    _currentState = GameState.Menu;
+                    // Ideally show a "You Win" screen
                 }
                 break;
         }
+
+        _previousKeyboardState = kstate;
 
         base.Update(gameTime);
     }
@@ -119,7 +121,7 @@ public class Game1 : Game
         {
             _spriteBatch.DrawString(_font, "Blob Game", new Vector2(100, 100), Color.White);
             _spriteBatch.DrawString(_font, "Press Enter to Start", new Vector2(100, 150), Color.White);
-            _spriteBatch.DrawString(_font, "Press S for Settings", new Vector2(100, 200), Color.White);
+            _spriteBatch.DrawString(_font, "Press O for Settings", new Vector2(100, 200), Color.White);
         }
         else if (_currentState == GameState.Settings)
         {
@@ -129,8 +131,8 @@ public class Game1 : Game
         }
         else if (_currentState == GameState.Playing)
         {
+            _level.Draw(_spriteBatch);
             _player.Draw(_spriteBatch);
-            _enemy.Draw(_spriteBatch);
             _spriteBatch.DrawString(_font, $"Health: {_player.Health}", new Vector2(10, 10), Color.White);
         }
 
