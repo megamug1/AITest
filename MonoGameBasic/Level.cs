@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -11,26 +12,67 @@ namespace MonoGameBasic
         public List<Enemy> Enemies { get; private set; }
         public Goal Goal { get; private set; }
 
-        public Level(GraphicsDevice graphicsDevice)
+        private GraphicsDevice _graphicsDevice;
+        private int _levelIndex;
+        private Random _random;
+
+        public Level(GraphicsDevice graphicsDevice, int levelIndex)
         {
+            _graphicsDevice = graphicsDevice;
+            _levelIndex = levelIndex;
+            _random = new Random(_levelIndex * 100); // Seed for reproducibility
+
             Obstacles = new List<Obstacle>();
             Enemies = new List<Enemy>();
 
-            // Create a simple level layout
+            GenerateLevel();
+        }
 
-            // Walls (Obstacles)
-            // A vertical wall in the middle
-            Obstacles.Add(new Obstacle(graphicsDevice, new Vector2(300, 100), 50, 300));
-            // Some horizontal blocks
-            Obstacles.Add(new Obstacle(graphicsDevice, new Vector2(100, 300), 150, 50));
-            Obstacles.Add(new Obstacle(graphicsDevice, new Vector2(500, 200), 100, 50));
+        private void GenerateLevel()
+        {
+            // Base difficulty parameters
+            int obstacleCount = 3 + _levelIndex; // Increases with level
+            int enemyCount = 1 + _levelIndex;    // Increases with level
 
-            // Enemies
-            Enemies.Add(new Enemy(graphicsDevice, new Vector2(100, 100)));
-            Enemies.Add(new Enemy(graphicsDevice, new Vector2(500, 100)));
+            // Prevent spawning on player start area (0,0 to 100,100)
+            Rectangle safeZone = new Rectangle(0, 0, 150, 150);
 
-            // Goal
-            Goal = new Goal(graphicsDevice, new Vector2(700, 400));
+            // Generate Obstacles
+            int obstaclesPlaced = 0;
+            while (obstaclesPlaced < obstacleCount)
+            {
+                // Random position within bounds (approx 800x480)
+                int x = _random.Next(100, 700);
+                int y = _random.Next(50, 400);
+                int w = _random.Next(50, 150);
+                int h = _random.Next(50, 150);
+
+                var obstacleRect = new Rectangle(x, y, w, h);
+                if (!obstacleRect.Intersects(safeZone))
+                {
+                     Obstacles.Add(new Obstacle(_graphicsDevice, new Vector2(x, y), w, h));
+                     obstaclesPlaced++;
+                }
+            }
+
+            // Generate Enemies
+            for (int i = 0; i < enemyCount; i++)
+            {
+                int x, y;
+                do
+                {
+                    x = _random.Next(150, 750);
+                    y = _random.Next(50, 430);
+                } while (safeZone.Contains(x, y)); // Simple check
+
+                Enemies.Add(new Enemy(_graphicsDevice, new Vector2(x, y)));
+            }
+
+            // Goal - placed far away or fixed bottom right
+            // For variety, let's place it randomly in the right half
+            int goalX = _random.Next(600, 750);
+            int goalY = _random.Next(100, 400);
+            Goal = new Goal(_graphicsDevice, new Vector2(goalX, goalY));
         }
 
         public void Update(GameTime gameTime, Viewport viewport)

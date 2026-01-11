@@ -13,6 +13,7 @@ public class Game1 : Game
 
     private Player _player;
     private Level _level;
+    private int _currentLevelIndex = 1;
 
     private KeyboardState _previousKeyboardState;
 
@@ -20,7 +21,9 @@ public class Game1 : Game
     {
         Menu,
         Playing,
-        Settings
+        Settings,
+        GameOver,
+        Victory
     }
 
     private GameState _currentState;
@@ -48,7 +51,7 @@ public class Game1 : Game
         _player = new Player(GraphicsDevice, startPos);
 
         // Initialize Level
-        _level = new Level(GraphicsDevice);
+        _level = new Level(GraphicsDevice, _currentLevelIndex);
     }
 
     protected override void Update(GameTime gameTime)
@@ -64,7 +67,14 @@ public class Game1 : Game
                     Exit();
 
                 if (kstate.IsKeyDown(Keys.Enter))
+                {
+                    // Reset game state when starting
+                    _currentLevelIndex = 1;
+                    _player.Health = 100;
+                    _player.Position = new Vector2(50, 50);
+                    _level = new Level(GraphicsDevice, _currentLevelIndex);
                     _currentState = GameState.Playing;
+                }
 
                 if (kstate.IsKeyDown(Keys.O))
                     _currentState = GameState.Settings;
@@ -79,8 +89,8 @@ public class Game1 : Game
                 if (gamePadState.Buttons.Back == ButtonState.Pressed || kstate.IsKeyDown(Keys.Escape))
                 {
                     _currentState = GameState.Menu;
-                    // Reset positions or state if desired, or just pause
                 }
+
                 _player.Update(gameTime, GraphicsDevice.Viewport);
                 _level.Update(gameTime, GraphicsDevice.Viewport);
 
@@ -89,20 +99,29 @@ public class Game1 : Game
 
                 if (_player.Health <= 0)
                 {
-                    // Game Over logic (reset for now)
-                    _player.Health = 100;
-                    _player.Position = new Vector2(50, 50);
-                    _currentState = GameState.Menu;
+                    _currentState = GameState.GameOver;
                 }
 
                 if (levelComplete)
                 {
-                    // Level Completed! Back to menu for now, or reset
-                     _player.Health = 100;
-                     _player.Position = new Vector2(50, 50);
-                    _currentState = GameState.Menu;
-                    // Ideally show a "You Win" screen
+                    _currentLevelIndex++;
+                    if (_currentLevelIndex > 10)
+                    {
+                        _currentState = GameState.Victory;
+                    }
+                    else
+                    {
+                        // Load next level, preserve health
+                        _level = new Level(GraphicsDevice, _currentLevelIndex);
+                        _player.Position = new Vector2(50, 50);
+                    }
                 }
+                break;
+
+            case GameState.GameOver:
+            case GameState.Victory:
+                if (kstate.IsKeyDown(Keys.Enter))
+                    _currentState = GameState.Menu;
                 break;
         }
 
@@ -133,7 +152,18 @@ public class Game1 : Game
         {
             _level.Draw(_spriteBatch);
             _player.Draw(_spriteBatch);
+            _spriteBatch.DrawString(_font, $"Level: {_currentLevelIndex}", new Vector2(10, 30), Color.White);
             _spriteBatch.DrawString(_font, $"Health: {_player.Health}", new Vector2(10, 10), Color.White);
+        }
+        else if (_currentState == GameState.GameOver)
+        {
+             _spriteBatch.DrawString(_font, "Game Over", new Vector2(100, 100), Color.White);
+             _spriteBatch.DrawString(_font, "Press Enter to Menu", new Vector2(100, 150), Color.White);
+        }
+        else if (_currentState == GameState.Victory)
+        {
+             _spriteBatch.DrawString(_font, "Victory! You beat 10 levels!", new Vector2(100, 100), Color.White);
+             _spriteBatch.DrawString(_font, "Press Enter to Menu", new Vector2(100, 150), Color.White);
         }
 
         _spriteBatch.End();
