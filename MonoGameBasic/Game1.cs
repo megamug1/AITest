@@ -66,7 +66,7 @@ public class Game1 : Game
                 if (kstate.IsKeyDown(Keys.Enter))
                     _currentState = GameState.Playing;
 
-                if (kstate.IsKeyDown(Keys.S))
+                if (kstate.IsKeyDown(Keys.O))
                     _currentState = GameState.Settings;
                 break;
 
@@ -121,7 +121,7 @@ public class Game1 : Game
         {
             _spriteBatch.DrawString(_font, "Blob Game", new Vector2(100, 100), Color.White);
             _spriteBatch.DrawString(_font, "Press Enter to Start", new Vector2(100, 150), Color.White);
-            _spriteBatch.DrawString(_font, "Press S for Settings", new Vector2(100, 200), Color.White);
+            _spriteBatch.DrawString(_font, "Press O for Settings", new Vector2(100, 200), Color.White);
         }
         else if (_currentState == GameState.Settings)
         {
