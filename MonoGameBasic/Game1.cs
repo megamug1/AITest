@@ -126,7 +126,8 @@ public class Game1 : Game
                     _currentState = GameState.Menu;
 
                 _player.Update(gameTime, GraphicsDevice.Viewport);
-                _level.Update(gameTime, GraphicsDevice.Viewport);
+                Vector2 playerCenter = _player.Position + new Vector2(_player.Width / 2f, _player.Height / 2f);
+                _level.Update(gameTime, GraphicsDevice.Viewport, playerCenter);
 
                 bool levelComplete = _level.CheckCollisions(_player);
 

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -9,77 +8,72 @@ namespace MonoGameBasic
     public class Level
     {
         public List<Obstacle> Obstacles { get; private set; }
-        public List<Enemy> Enemies { get; private set; }
+        public List<EnemyBase> Enemies { get; private set; }
+        public List<Projectile> Projectiles { get; private set; }
         public Goal Goal { get; private set; }
 
         private GraphicsDevice _graphicsDevice;
         private int _levelIndex;
-        private Random _random;
         private float _enemySpeedMultiplier;
 
         public Level(GraphicsDevice graphicsDevice, int levelIndex, float enemySpeedMultiplier = 1.0f)
         {
             _graphicsDevice = graphicsDevice;
             _levelIndex = levelIndex;
-            _random = new Random(_levelIndex * 100); // Seed for reproducibility
             _enemySpeedMultiplier = enemySpeedMultiplier;
 
             Obstacles = new List<Obstacle>();
-            Enemies = new List<Enemy>();
+            Enemies = new List<EnemyBase>();
+            Projectiles = new List<Projectile>();
 
-            GenerateLevel();
+            BuildFromData();
         }
 
-        private void GenerateLevel()
+        private void BuildFromData()
         {
-            int obstacleCount = 3 + _levelIndex;
-            int enemyCount = 1 + _levelIndex;
+            var def = LevelData.Levels[_levelIndex - 1];
 
-            Rectangle safeZone = new Rectangle(0, 0, 150, 150);
+            foreach (var o in def.Obstacles)
+                Obstacles.Add(new Obstacle(_graphicsDevice, new Vector2(o.X, o.Y), o.Width, o.Height));
 
-            // Generate Obstacles
-            int obstaclesPlaced = 0;
-            while (obstaclesPlaced < obstacleCount)
+            foreach (var e in def.Enemies)
             {
-                int x = _random.Next(100, 700);
-                int y = _random.Next(50, 400);
-                int w = _random.Next(50, 150);
-                int h = _random.Next(50, 150);
+                var pos = new Vector2(e.X, e.Y);
 
-                var obstacleRect = new Rectangle(x, y, w, h);
-                if (!obstacleRect.Intersects(safeZone))
+                switch (e.Type)
                 {
-                    Obstacles.Add(new Obstacle(_graphicsDevice, new Vector2(x, y), w, h));
-                    obstaclesPlaced++;
+                    case EnemyType.Bouncer:
+                        Enemies.Add(new BouncerEnemy(_graphicsDevice, pos,
+                            e.SpeedOrInterval * _enemySpeedMultiplier, e.Size));
+                        break;
+
+                    case EnemyType.Tracker:
+                        Enemies.Add(new TrackerEnemy(_graphicsDevice, pos,
+                            e.SpeedOrInterval * _enemySpeedMultiplier, e.Size));
+                        break;
+
+                    case EnemyType.Shooter:
+                        float interval = e.SpeedOrInterval / _enemySpeedMultiplier;
+                        Enemies.Add(new ShooterEnemy(_graphicsDevice, pos,
+                            _enemySpeedMultiplier, interval, e.Size));
+                        break;
                 }
             }
 
-            // Generate Enemies
-            for (int i = 0; i < enemyCount; i++)
-            {
-                int x, y;
-                do
-                {
-                    x = _random.Next(150, 750);
-                    y = _random.Next(50, 430);
-                } while (safeZone.Contains(x, y));
-
-                Enemies.Add(new Enemy(_graphicsDevice, new Vector2(x, y), _enemySpeedMultiplier));
-            }
-
-            // Goal — placed randomly in the right half
-            int goalX = _random.Next(600, 750);
-            int goalY = _random.Next(100, 400);
-            Goal = new Goal(_graphicsDevice, new Vector2(goalX, goalY));
+            Goal = new Goal(_graphicsDevice, new Vector2(def.GoalX, def.GoalY));
         }
 
-        public void Update(GameTime gameTime, Viewport viewport)
+        public void Update(GameTime gameTime, Viewport viewport, Vector2 playerPosition)
         {
             foreach (var enemy in Enemies)
             {
-                enemy.Update(gameTime, viewport);
+                enemy.Update(gameTime, viewport, playerPosition);
 
-                // Resolve enemy vs obstacle collisions using previous position for accurate axis detection
+                // Collect projectiles spawned by shooters
+                var newProjectiles = enemy.GetNewProjectiles();
+                Projectiles.AddRange(newProjectiles);
+
+                // Enemy vs obstacle collision
                 foreach (var obstacle in Obstacles)
                 {
                     if (!enemy.Bounds.Intersects(obstacle.Bounds))
@@ -87,8 +81,6 @@ namespace MonoGameBasic
 
                     Rectangle intersection = Rectangle.Intersect(enemy.Bounds, obstacle.Bounds);
 
-                    // Determine which axis was entered by comparing previous position to the obstacle edges.
-                    // This is more reliable than comparing centers, especially at corners.
                     bool wasLeftOf  = enemy.PreviousPosition.X + enemy.Width <= obstacle.Bounds.Left;
                     bool wasRightOf = enemy.PreviousPosition.X >= obstacle.Bounds.Right;
                     bool wasAbove   = enemy.PreviousPosition.Y + enemy.Height <= obstacle.Bounds.Top;
@@ -97,11 +89,8 @@ namespace MonoGameBasic
                     bool horizontalApproach = wasLeftOf || wasRightOf;
                     bool verticalApproach   = wasAbove  || wasBelow;
 
-                    // Prefer whichever axis the previous position clearly indicates; fall back to
-                    // smallest-intersection heuristic when the enemy spawned inside the obstacle.
                     if (horizontalApproach || (!verticalApproach && intersection.Width < intersection.Height))
                     {
-                        // Snap to the correct horizontal edge
                         if (enemy.Bounds.Center.X < obstacle.Bounds.Center.X)
                             enemy.Position = new Vector2(obstacle.Bounds.Left - enemy.Width, enemy.Position.Y);
                         else
@@ -111,7 +100,6 @@ namespace MonoGameBasic
                     }
                     else
                     {
-                        // Snap to the correct vertical edge
                         if (enemy.Bounds.Center.Y < obstacle.Bounds.Center.Y)
                             enemy.Position = new Vector2(enemy.Position.X, obstacle.Bounds.Top - enemy.Height);
                         else
@@ -121,6 +109,24 @@ namespace MonoGameBasic
                     }
                 }
             }
+
+            // Update projectiles and destroy those that hit obstacles
+            foreach (var proj in Projectiles)
+            {
+                proj.Update(gameTime, viewport);
+
+                if (!proj.IsActive) continue;
+                foreach (var obstacle in Obstacles)
+                {
+                    if (proj.Bounds.Intersects(obstacle.Bounds))
+                    {
+                        proj.IsActive = false;
+                        break;
+                    }
+                }
+            }
+
+            Projectiles.RemoveAll(p => !p.IsActive);
         }
 
         public void Draw(SpriteBatch spriteBatch)
@@ -131,12 +137,15 @@ namespace MonoGameBasic
             foreach (var enemy in Enemies)
                 enemy.Draw(spriteBatch);
 
+            foreach (var proj in Projectiles)
+                proj.Draw(spriteBatch);
+
             Goal?.Draw(spriteBatch);
         }
 
         public bool CheckCollisions(Player player)
         {
-            // Obstacles — push player out along the shallowest axis
+            // Obstacles — push player out along shallowest axis
             foreach (var obstacle in Obstacles)
             {
                 if (player.Bounds.Intersects(obstacle.Bounds))
@@ -160,7 +169,7 @@ namespace MonoGameBasic
                 }
             }
 
-            // Enemies — deal 10 damage per hit, then grant 1 second of invincibility
+            // Enemies — 10 damage per hit with invincibility window
             foreach (var enemy in Enemies)
             {
                 if (player.Bounds.Intersects(enemy.Bounds) && !player.IsInvincible)
@@ -168,8 +177,26 @@ namespace MonoGameBasic
                     player.Health -= 10;
                     player.InvincibilityTime = 1.0f;
 
-                    // Knock the player away from the enemy
                     var direction = player.Position - enemy.Position;
+                    if (direction != Vector2.Zero)
+                    {
+                        direction.Normalize();
+                        player.Position += direction * 30f;
+                    }
+                }
+            }
+
+            // Projectiles — same damage/knockback, destroys projectile on hit
+            foreach (var proj in Projectiles)
+            {
+                if (!proj.IsActive) continue;
+                if (player.Bounds.Intersects(proj.Bounds) && !player.IsInvincible)
+                {
+                    player.Health -= 10;
+                    player.InvincibilityTime = 1.0f;
+                    proj.IsActive = false;
+
+                    var direction = player.Position - proj.Position;
                     if (direction != Vector2.Zero)
                     {
                         direction.Normalize();
