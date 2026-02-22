@@ -15,12 +15,14 @@ namespace MonoGameBasic
         private GraphicsDevice _graphicsDevice;
         private int _levelIndex;
         private Random _random;
+        private float _enemySpeedMultiplier;
 
-        public Level(GraphicsDevice graphicsDevice, int levelIndex)
+        public Level(GraphicsDevice graphicsDevice, int levelIndex, float enemySpeedMultiplier = 1.0f)
         {
             _graphicsDevice = graphicsDevice;
             _levelIndex = levelIndex;
             _random = new Random(_levelIndex * 100); // Seed for reproducibility
+            _enemySpeedMultiplier = enemySpeedMultiplier;
 
             Obstacles = new List<Obstacle>();
             Enemies = new List<Enemy>();
@@ -30,18 +32,15 @@ namespace MonoGameBasic
 
         private void GenerateLevel()
         {
-            // Base difficulty parameters
-            int obstacleCount = 3 + _levelIndex; // Increases with level
-            int enemyCount = 1 + _levelIndex;    // Increases with level
+            int obstacleCount = 3 + _levelIndex;
+            int enemyCount = 1 + _levelIndex;
 
-            // Prevent spawning on player start area (0,0 to 100,100)
             Rectangle safeZone = new Rectangle(0, 0, 150, 150);
 
             // Generate Obstacles
             int obstaclesPlaced = 0;
             while (obstaclesPlaced < obstacleCount)
             {
-                // Random position within bounds (approx 800x480)
                 int x = _random.Next(100, 700);
                 int y = _random.Next(50, 400);
                 int w = _random.Next(50, 150);
@@ -50,8 +49,8 @@ namespace MonoGameBasic
                 var obstacleRect = new Rectangle(x, y, w, h);
                 if (!obstacleRect.Intersects(safeZone))
                 {
-                     Obstacles.Add(new Obstacle(_graphicsDevice, new Vector2(x, y), w, h));
-                     obstaclesPlaced++;
+                    Obstacles.Add(new Obstacle(_graphicsDevice, new Vector2(x, y), w, h));
+                    obstaclesPlaced++;
                 }
             }
 
@@ -63,13 +62,12 @@ namespace MonoGameBasic
                 {
                     x = _random.Next(150, 750);
                     y = _random.Next(50, 430);
-                } while (safeZone.Contains(x, y)); // Simple check
+                } while (safeZone.Contains(x, y));
 
-                Enemies.Add(new Enemy(_graphicsDevice, new Vector2(x, y)));
+                Enemies.Add(new Enemy(_graphicsDevice, new Vector2(x, y), _enemySpeedMultiplier));
             }
 
-            // Goal - placed far away or fixed bottom right
-            // For variety, let's place it randomly in the right half
+            // Goal — placed randomly in the right half
             int goalX = _random.Next(600, 750);
             int goalY = _random.Next(100, 400);
             Goal = new Goal(_graphicsDevice, new Vector2(goalX, goalY));
@@ -81,34 +79,45 @@ namespace MonoGameBasic
             {
                 enemy.Update(gameTime, viewport);
 
-                // Enemy vs Obstacle Collision
+                // Resolve enemy vs obstacle collisions using previous position for accurate axis detection
                 foreach (var obstacle in Obstacles)
                 {
-                    if (enemy.Bounds.Intersects(obstacle.Bounds))
+                    if (!enemy.Bounds.Intersects(obstacle.Bounds))
+                        continue;
+
+                    Rectangle intersection = Rectangle.Intersect(enemy.Bounds, obstacle.Bounds);
+
+                    // Determine which axis was entered by comparing previous position to the obstacle edges.
+                    // This is more reliable than comparing centers, especially at corners.
+                    bool wasLeftOf  = enemy.PreviousPosition.X + enemy.Width <= obstacle.Bounds.Left;
+                    bool wasRightOf = enemy.PreviousPosition.X >= obstacle.Bounds.Right;
+                    bool wasAbove   = enemy.PreviousPosition.Y + enemy.Height <= obstacle.Bounds.Top;
+                    bool wasBelow   = enemy.PreviousPosition.Y >= obstacle.Bounds.Bottom;
+
+                    bool horizontalApproach = wasLeftOf || wasRightOf;
+                    bool verticalApproach   = wasAbove  || wasBelow;
+
+                    // Prefer whichever axis the previous position clearly indicates; fall back to
+                    // smallest-intersection heuristic when the enemy spawned inside the obstacle.
+                    if (horizontalApproach || (!verticalApproach && intersection.Width < intersection.Height))
                     {
-                         Rectangle intersection = Rectangle.Intersect(enemy.Bounds, obstacle.Bounds);
+                        // Snap to the correct horizontal edge
+                        if (enemy.Bounds.Center.X < obstacle.Bounds.Center.X)
+                            enemy.Position = new Vector2(obstacle.Bounds.Left - enemy.Width, enemy.Position.Y);
+                        else
+                            enemy.Position = new Vector2(obstacle.Bounds.Right, enemy.Position.Y);
 
-                         // Determine collision side and reflect velocity
-                         if (intersection.Width < intersection.Height)
-                         {
-                             // Horizontal Collision
-                             if (enemy.Bounds.Center.X < obstacle.Bounds.Center.X)
-                                 enemy.Position = new Vector2(enemy.Position.X - intersection.Width, enemy.Position.Y);
-                             else
-                                 enemy.Position = new Vector2(enemy.Position.X + intersection.Width, enemy.Position.Y);
+                        enemy.Velocity = new Vector2(-enemy.Velocity.X, enemy.Velocity.Y);
+                    }
+                    else
+                    {
+                        // Snap to the correct vertical edge
+                        if (enemy.Bounds.Center.Y < obstacle.Bounds.Center.Y)
+                            enemy.Position = new Vector2(enemy.Position.X, obstacle.Bounds.Top - enemy.Height);
+                        else
+                            enemy.Position = new Vector2(enemy.Position.X, obstacle.Bounds.Bottom);
 
-                             enemy.Velocity = new Vector2(enemy.Velocity.X * -1, enemy.Velocity.Y);
-                         }
-                         else
-                         {
-                             // Vertical Collision
-                             if (enemy.Bounds.Center.Y < obstacle.Bounds.Center.Y)
-                                 enemy.Position = new Vector2(enemy.Position.X, enemy.Position.Y - intersection.Height);
-                             else
-                                 enemy.Position = new Vector2(enemy.Position.X, enemy.Position.Y + intersection.Height);
-
-                             enemy.Velocity = new Vector2(enemy.Velocity.X, enemy.Velocity.Y * -1);
-                         }
+                        enemy.Velocity = new Vector2(enemy.Velocity.X, -enemy.Velocity.Y);
                     }
                 }
             }
@@ -117,28 +126,23 @@ namespace MonoGameBasic
         public void Draw(SpriteBatch spriteBatch)
         {
             foreach (var obstacle in Obstacles)
-            {
                 obstacle.Draw(spriteBatch);
-            }
 
             foreach (var enemy in Enemies)
-            {
                 enemy.Draw(spriteBatch);
-            }
 
             Goal?.Draw(spriteBatch);
         }
 
         public bool CheckCollisions(Player player)
         {
-            // Check Obstacles (Walls) - Prevent movement
+            // Obstacles — push player out along the shallowest axis
             foreach (var obstacle in Obstacles)
             {
                 if (player.Bounds.Intersects(obstacle.Bounds))
                 {
                     Rectangle intersection = Rectangle.Intersect(player.Bounds, obstacle.Bounds);
 
-                    // Resolve collision by pushing out the player along the shallowest axis
                     if (intersection.Width < intersection.Height)
                     {
                         if (player.Bounds.Center.X < obstacle.Bounds.Center.X)
@@ -156,28 +160,27 @@ namespace MonoGameBasic
                 }
             }
 
-            // Check Enemies - Damage
+            // Enemies — deal 10 damage per hit, then grant 1 second of invincibility
             foreach (var enemy in Enemies)
             {
-                if (player.Bounds.Intersects(enemy.Bounds))
+                if (player.Bounds.Intersects(enemy.Bounds) && !player.IsInvincible)
                 {
-                     player.Health -= 1;
+                    player.Health -= 10;
+                    player.InvincibilityTime = 1.0f;
 
-                     // Pushback
-                     var direction = player.Position - enemy.Position;
-                     if (direction != Vector2.Zero)
-                     {
-                         direction.Normalize();
-                         player.Position += direction * 10f;
-                     }
+                    // Knock the player away from the enemy
+                    var direction = player.Position - enemy.Position;
+                    if (direction != Vector2.Zero)
+                    {
+                        direction.Normalize();
+                        player.Position += direction * 30f;
+                    }
                 }
             }
 
-            // Check Goal
+            // Goal
             if (Goal != null && player.Bounds.Intersects(Goal.Bounds))
-            {
-                return true; // Level Complete
-            }
+                return true;
 
             return false;
         }

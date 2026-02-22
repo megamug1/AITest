@@ -18,10 +18,17 @@ namespace MonoGameBasic.Entities
             Width = width;
             Height = height;
 
-            // Create texture programmatically (Gray Rectangle)
+            // Bordered texture: dark outline, medium gray interior
             Texture = new Texture2D(graphicsDevice, width, height);
             Color[] data = new Color[width * height];
-            for (int i = 0; i < data.Length; ++i) data[i] = Color.Gray;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    bool isBorder = x == 0 || y == 0 || x == width - 1 || y == height - 1;
+                    data[y * width + x] = isBorder ? new Color(55, 55, 55) : new Color(110, 110, 110);
+                }
+            }
             Texture.SetData(data);
         }
 

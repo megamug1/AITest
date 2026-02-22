@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -9,6 +10,11 @@ namespace MonoGameBasic.Entities
         public Vector2 Position;
         public float Speed = 200f;
         public int Health { get; set; } = 100;
+
+        // Invincibility window after taking a hit (seconds remaining)
+        public float InvincibilityTime { get; set; } = 0f;
+        public bool IsInvincible => InvincibilityTime > 0f;
+
         public Texture2D Texture { get; private set; }
         public int Width => Texture.Width;
         public int Height => Texture.Height;
@@ -19,10 +25,17 @@ namespace MonoGameBasic.Entities
         {
             Position = startPosition;
 
-            // Create texture programmatically (White Square)
+            // Bordered texture: white outline, blue-tinted interior
             Texture = new Texture2D(graphicsDevice, 32, 32);
             Color[] data = new Color[32 * 32];
-            for (int i = 0; i < data.Length; ++i) data[i] = Color.White;
+            for (int y = 0; y < 32; y++)
+            {
+                for (int x = 0; x < 32; x++)
+                {
+                    bool isBorder = x == 0 || y == 0 || x == 31 || y == 31;
+                    data[y * 32 + x] = isBorder ? Color.White : new Color(180, 180, 220);
+                }
+            }
             Texture.SetData(data);
         }
 
@@ -30,6 +43,9 @@ namespace MonoGameBasic.Entities
         {
             var kstate = Keyboard.GetState();
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (InvincibilityTime > 0f)
+                InvincibilityTime = Math.Max(0f, InvincibilityTime - deltaTime);
 
             if (kstate.IsKeyDown(Keys.Up) || kstate.IsKeyDown(Keys.W))
                 Position.Y -= Speed * deltaTime;
@@ -43,7 +59,7 @@ namespace MonoGameBasic.Entities
             if (kstate.IsKeyDown(Keys.Right) || kstate.IsKeyDown(Keys.D))
                 Position.X += Speed * deltaTime;
 
-            // Keep within bounds
+            // Keep within viewport bounds
             if (Position.X < 0) Position.X = 0;
             if (Position.Y < 0) Position.Y = 0;
             if (Position.X > viewport.Width - Width) Position.X = viewport.Width - Width;
@@ -52,7 +68,10 @@ namespace MonoGameBasic.Entities
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            spriteBatch.Draw(Texture, Position, Color.White);
+            // Flash at ~10Hz while invincible to signal immunity window
+            bool visible = !IsInvincible || (int)(InvincibilityTime * 10) % 2 == 0;
+            if (visible)
+                spriteBatch.Draw(Texture, Position, Color.White);
         }
     }
 }
