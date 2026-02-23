@@ -133,8 +133,8 @@ flowchart LR
 
     subgraph "Level.CheckCollisions()"
         PL[Player] -- "pushed out" --> O
-        PL -- "10 dmg + knockback\n1s invincibility" --> E
-        PL -- "10 dmg + knockback\ndestroy projectile" --> P2
+        PL -- "10 dmg + knockback<br/>1s invincibility" --> E
+        PL -- "10 dmg + knockback<br/>destroy projectile" --> P2
         PL -- "level complete" --> G[Goal]
     end
 ```
@@ -151,7 +151,7 @@ stateDiagram-v2
     Settings --> Menu : Escape
 
     Playing --> Menu : Escape
-    Playing --> Playing : Goal reached\n(next level)
+    Playing --> Playing : Goal reached<br/>(next level)
     Playing --> Victory : Beat level 10
     Playing --> GameOver : Health ≤ 0
 
@@ -164,22 +164,22 @@ stateDiagram-v2
 ```mermaid
 flowchart LR
     subgraph "Levels 1-3"
-        L1["1: Tutorial\n1 bouncer"]
-        L2["2: Corridor\n2 bouncers"]
-        L3["3: Maze\n3 bouncers\nmixed sizes"]
+        L1["1: Tutorial<br/>1 bouncer"]
+        L2["2: Corridor<br/>2 bouncers"]
+        L3["3: Maze<br/>3 bouncers<br/>mixed sizes"]
     end
 
     subgraph "Levels 4-6"
-        L4["4: Tracker Intro\n2 bouncers\n1 tracker"]
-        L5["5: Double Trouble\n2 bouncers\n2 trackers"]
-        L6["6: Gauntlet\n3 fast bouncers\n1 tracker"]
+        L4["4: Tracker Intro<br/>2 bouncers<br/>1 tracker"]
+        L5["5: Double Trouble<br/>2 bouncers<br/>2 trackers"]
+        L6["6: Gauntlet<br/>3 fast bouncers<br/>1 tracker"]
     end
 
     subgraph "Levels 7-10"
-        L7["7: Shooter Intro\n2 bouncers, 1 tracker\n1 shooter"]
-        L8["8: Crossfire\n1 bouncer, 2 trackers\n2 shooters"]
-        L9["9: Fortress\n2 bouncers, 2 trackers\n2 shooters"]
-        L10["10: Final\nAll types\nGoal in center"]
+        L7["7: Shooter Intro<br/>2 bouncers, 1 tracker<br/>1 shooter"]
+        L8["8: Crossfire<br/>1 bouncer, 2 trackers<br/>2 shooters"]
+        L9["9: Fortress<br/>2 bouncers, 2 trackers<br/>2 shooters"]
+        L10["10: Final<br/>All types<br/>Goal in center"]
     end
 
     L1 --> L2 --> L3 --> L4 --> L5 --> L6 --> L7 --> L8 --> L9 --> L10
