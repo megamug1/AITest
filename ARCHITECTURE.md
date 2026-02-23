@@ -184,3 +184,97 @@ flowchart LR
 
     L1 --> L2 --> L3 --> L4 --> L5 --> L6 --> L7 --> L8 --> L9 --> L10
 ```
+
+## Conceptual Game Model
+
+How the game works from a player's perspective, and how the systems interact each frame.
+
+```mermaid
+flowchart TB
+    subgraph INPUT["Player Input"]
+        KB["Keyboard<br/>WASD / Arrows"]
+    end
+
+    subgraph GAMELOOP["Game Loop — each frame"]
+        direction TB
+
+        subgraph UPDATE["Update Phase"]
+            direction LR
+            PM["Player Movement<br/>Speed × deltaTime<br/>Clamped to viewport"]
+            EM["Enemy Behavior"]
+            PU["Projectile Movement<br/>Straight line, destroy<br/>if off-screen"]
+        end
+
+        subgraph ENEMIES["Enemy AI"]
+            direction LR
+            B["🔴 Bouncer<br/>Random direction<br/>Reflects off surfaces"]
+            T["🟣 Tracker<br/>Steers toward player<br/>every frame"]
+            S["🟠 Shooter<br/>Aims at player<br/>Fires on timer"]
+        end
+
+        subgraph COLLISION["Collision Resolution"]
+            direction TB
+            C1["Player ↔ Obstacle<br/>Push player out"]
+            C2["Player ↔ Enemy<br/>10 damage + knockback<br/>1s invincibility"]
+            C3["Player ↔ Projectile<br/>10 damage + knockback<br/>Destroy projectile"]
+            C4["Player ↔ Goal<br/>Level complete!"]
+            C5["Enemy ↔ Obstacle<br/>Snap + reflect velocity"]
+            C6["Projectile ↔ Obstacle<br/>Destroy projectile"]
+        end
+    end
+
+    subgraph OUTCOME["Outcomes"]
+        direction LR
+        NEXT["Next Level<br/>Reset position<br/>Keep health"]
+        OVER["Game Over<br/>Health ≤ 0"]
+        WIN["Victory<br/>Beat level 10"]
+    end
+
+    KB --> PM
+    PM --> COLLISION
+    EM --> COLLISION
+    PU --> COLLISION
+    ENEMIES --> EM
+    S -.-> PU
+
+    C4 --> NEXT
+    C4 --> WIN
+    C2 --> OVER
+    C3 --> OVER
+```
+
+```mermaid
+flowchart LR
+    subgraph FRAME["Single Frame Lifecycle"]
+        direction LR
+        I["Read<br/>Input"] --> U["Update<br/>Positions"] --> C["Resolve<br/>Collisions"] --> R["Check<br/>Results"] --> D["Draw<br/>Everything"]
+    end
+
+    subgraph ENTITIES["What Gets Drawn"]
+        direction TB
+        E1["🔴 Enemies — bordered rectangles"]
+        E2["⬜ Player — white/blue 32×32<br/>Flashes when invincible"]
+        E3["⬛ Obstacles — gray walls"]
+        E4["🟡 Projectiles — 8×8 yellow dots"]
+        E5["🟢 Goal — 48×48 gold-bordered green"]
+        E6["❤️ HUD — health bar + level counter"]
+    end
+
+    D --> ENTITIES
+```
+
+```mermaid
+flowchart TB
+    subgraph DAMAGE["Damage & Survival Model"]
+        direction TB
+        HP["Player HP: 100"]
+        HIT["Hit by enemy<br/>or projectile"]
+        DMG["-10 HP"]
+        INV["1 second invincibility<br/>Player flashes"]
+        KB2["Knocked back 30 units<br/>away from threat"]
+        SAFE["Invincible — no damage<br/>until timer expires"]
+
+        HP --> HIT --> DMG --> INV --> KB2 --> SAFE
+        SAFE -.->|"timer expires"| HIT
+    end
+```
