@@ -162,38 +162,38 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
+        GraphicsDevice.Clear(new Color(18, 28, 15));
 
         _spriteBatch.Begin();
 
         switch (_currentState)
         {
             case GameState.Menu:
-                _spriteBatch.DrawString(_font, "Blob Game",              new Vector2(100, 100), Color.White);
-                _spriteBatch.DrawString(_font, "Press Enter to Start",   new Vector2(100, 150), Color.White);
-                _spriteBatch.DrawString(_font, "Press O for Settings",   new Vector2(100, 200), Color.White);
-                _spriteBatch.DrawString(_font, "Press Escape to Quit",   new Vector2(100, 250), Color.LightGray);
+                _spriteBatch.DrawString(_font, "Blob Game",              new Vector2(100, 100), new Color(220, 190, 70));
+                _spriteBatch.DrawString(_font, "Press Enter to Start",   new Vector2(100, 150), new Color(210, 200, 170));
+                _spriteBatch.DrawString(_font, "Press O for Settings",   new Vector2(100, 200), new Color(210, 200, 170));
+                _spriteBatch.DrawString(_font, "Press Escape to Quit",   new Vector2(100, 250), new Color(160, 150, 130));
                 break;
 
             case GameState.Settings:
-                _spriteBatch.DrawString(_font, "Settings", new Vector2(100, 60), Color.White);
-                _spriteBatch.DrawString(_font, "Up/Down to select    Left/Right to change", new Vector2(100, 90), Color.LightGray);
+                _spriteBatch.DrawString(_font, "Settings", new Vector2(100, 60), new Color(220, 190, 70));
+                _spriteBatch.DrawString(_font, "Up/Down to select    Left/Right to change", new Vector2(100, 90), new Color(160, 150, 130));
 
                 // Row 0: Player Speed
-                Color playerRowColor = _settingsSelection == 0 ? Color.Yellow : Color.White;
+                Color playerRowColor = _settingsSelection == 0 ? Color.Yellow : new Color(210, 200, 170);
                 string playerArrow   = _settingsSelection == 0 ? "> " : "  ";
                 _spriteBatch.DrawString(_font,
                     $"{playerArrow}Player Speed:  < {SpeedLabels[_playerSpeedOption]} >",
                     new Vector2(100, 160), playerRowColor);
 
                 // Row 1: Enemy Speed
-                Color enemyRowColor = _settingsSelection == 1 ? Color.Yellow : Color.White;
+                Color enemyRowColor = _settingsSelection == 1 ? Color.Yellow : new Color(210, 200, 170);
                 string enemyArrow   = _settingsSelection == 1 ? "> " : "  ";
                 _spriteBatch.DrawString(_font,
                     $"{enemyArrow}Enemy Speed:   < {SpeedLabels[_enemySpeedOption]} >",
                     new Vector2(100, 210), enemyRowColor);
 
-                _spriteBatch.DrawString(_font, "Press Escape to go back", new Vector2(100, 310), Color.LightGray);
+                _spriteBatch.DrawString(_font, "Press Escape to go back", new Vector2(100, 310), new Color(160, 150, 130));
                 break;
 
             case GameState.Playing:
@@ -203,13 +203,13 @@ public class Game1 : Game
                 break;
 
             case GameState.GameOver:
-                _spriteBatch.DrawString(_font, "Game Over",                    new Vector2(100, 100), Color.Red);
-                _spriteBatch.DrawString(_font, "Press Enter to return to Menu", new Vector2(100, 150), Color.White);
+                _spriteBatch.DrawString(_font, "Game Over",                    new Vector2(100, 100), new Color(200, 40, 30));
+                _spriteBatch.DrawString(_font, "Press Enter to return to Menu", new Vector2(100, 150), new Color(210, 200, 170));
                 break;
 
             case GameState.Victory:
-                _spriteBatch.DrawString(_font, "Victory! You beat all 10 levels!", new Vector2(100, 100), Color.Gold);
-                _spriteBatch.DrawString(_font, "Press Enter to return to Menu",    new Vector2(100, 150), Color.White);
+                _spriteBatch.DrawString(_font, "Victory! You beat all 10 levels!", new Vector2(100, 100), new Color(220, 190, 70));
+                _spriteBatch.DrawString(_font, "Press Enter to return to Menu",    new Vector2(100, 150), new Color(210, 200, 170));
                 break;
         }
 
@@ -233,11 +233,11 @@ public class Game1 : Game
                        : Color.Red;
 
         // Background (depleted portion)
-        _spriteBatch.Draw(_pixelTexture, new Rectangle(barX, barY, barWidth, barHeight), Color.DarkRed);
+        _spriteBatch.Draw(_pixelTexture, new Rectangle(barX, barY, barWidth, barHeight), new Color(60, 20, 15));
         // Foreground (remaining health)
         _spriteBatch.Draw(_pixelTexture, new Rectangle(barX, barY, (int)(barWidth * healthRatio), barHeight), barColor);
 
-        _spriteBatch.DrawString(_font, $"HP: {_player.Health}",         new Vector2(barX + barWidth + 8, barY - 2), Color.White);
-        _spriteBatch.DrawString(_font, $"Level: {_currentLevelIndex}/10", new Vector2(barX, barY + barHeight + 4), Color.White);
+        _spriteBatch.DrawString(_font, $"HP: {_player.Health}",         new Vector2(barX + barWidth + 8, barY - 2), new Color(210, 200, 170));
+        _spriteBatch.DrawString(_font, $"Level: {_currentLevelIndex}/10", new Vector2(barX, barY + barHeight + 4), new Color(210, 200, 170));
     }
 }

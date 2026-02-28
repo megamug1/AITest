@@ -25,15 +25,70 @@ namespace MonoGameBasic.Entities
         {
             Position = startPosition;
 
-            // Bordered texture: white outline, blue-tinted interior
+            // Hooded forest ranger viewed from top-down
             Texture = new Texture2D(graphicsDevice, 32, 32);
             Color[] data = new Color[32 * 32];
-            for (int y = 0; y < 32; y++)
+            int s = 32;
+            float cx = 15.5f, cy = 15.5f;
+            var outline = new Color(20, 42, 15);
+            var cloakDark = new Color(35, 68, 25);
+            var cloakLight = new Color(72, 128, 50);
+            var hoodDark = new Color(28, 52, 18);
+            var skin = new Color(185, 145, 105);
+            var eyeColor = new Color(15, 15, 25);
+            var belt = new Color(105, 72, 32);
+            var buckle = new Color(180, 160, 60);
+            var boot = new Color(72, 48, 22);
+
+            for (int y = 0; y < s; y++)
             {
-                for (int x = 0; x < 32; x++)
+                for (int x = 0; x < s; x++)
                 {
-                    bool isBorder = x == 0 || y == 0 || x == 31 || y == 31;
-                    data[y * 32 + x] = isBorder ? Color.White : new Color(180, 180, 220);
+                    float dx = x - cx;
+                    float dy = y - cy;
+                    float ry = 14f;
+                    float rx = 11f + dy * 0.15f;
+                    if (rx < 3f) rx = 3f;
+                    float ovalDist = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry);
+
+                    if (ovalDist > 1f) { data[y * s + x] = Color.Transparent; continue; }
+
+                    float edge = 1f - ovalDist;
+                    Color pixel;
+                    if (edge < 0.06f) pixel = outline;
+                    else if (y < 13) pixel = Color.Lerp(cloakDark, hoodDark, 0.3f + edge * 0.3f);
+                    else pixel = Color.Lerp(cloakDark, cloakLight, edge * 0.8f);
+
+                    if (y >= 3 && y < 12 && Math.Abs(dx) <= 1.5f)
+                        pixel = Color.Lerp(pixel, outline, 0.3f);
+
+                    float faceDy = y - 9f;
+                    float faceDist = (dx * dx) / 12f + (faceDy * faceDy) / 6f;
+                    if (faceDist < 1f && y >= 7 && y <= 12)
+                    {
+                        pixel = faceDy < -1.5f ? Color.Lerp(skin, hoodDark, 0.7f) : skin;
+                        if (y == 10 && (x == 14 || x == 17)) pixel = eyeColor;
+                    }
+
+                    if (y >= 21 && y <= 22 && edge > 0.15f)
+                    {
+                        pixel = belt;
+                        if (Math.Abs(dx) <= 1 && y == 21) pixel = buckle;
+                    }
+
+                    if (y > 14 && y < 28 && edge > 0.1f)
+                    {
+                        if (Math.Abs(dx - 4) < 0.8f || Math.Abs(dx + 4) < 0.8f)
+                            pixel = Color.Lerp(pixel, cloakDark, 0.3f);
+                    }
+
+                    if (y >= 27 && y <= 29 && edge > 0.1f)
+                    {
+                        if ((dx >= -5 && dx <= -2) || (dx >= 2 && dx <= 5))
+                            pixel = boot;
+                    }
+
+                    data[y * s + x] = pixel;
                 }
             }
             Texture.SetData(data);
